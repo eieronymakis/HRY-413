@@ -4,8 +4,19 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+/* 
+	Colors for stdout
+*/
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 /*
-	Create true, false enumeration
+	Create true, false enum
 */
 typedef enum { FALSE = 0, TRUE = !FALSE} bool;
 
@@ -19,7 +30,9 @@ char *INPUT_FILE = NULL;
 char *OUTPUT_FILE = NULL;
 char *KEY_FILE = NULL;
 
-// Declare numbers as size_t to prevent size limitations
+/*
+	Declare GMP variables
+*/
 mpz_t Q;
 mpz_t P;
 mpz_t N;
@@ -27,18 +40,27 @@ mpz_t L;
 mpz_t E;
 mpz_t D;
 
-// Temp variables used for calculations
+/*
+	Declare GMP temporary variables used for calculations
+*/
 mpz_t tmpA;
 mpz_t tmpB;
+mpz_t tmpC;
+mpz_t tmpD;
 
 /*----------------------------------------------------------------------- 
 						RSA IMPLEMENTATIONS
 ----------------------------------------------------------------------- */
 
 
-/*	CHECK IF A NUMBER IS PRIME USING GMP LIBRARY*/
+/* 
+	Check if a number is prime,
+	using the GMP library function mpz_probap_prime(),
+	which returns if 1 or 2 if number is prime or probably prime,
+	0 if the number is defenitely not prime
+*/
 bool IS_PRIME(mpz_t a){
-	/* GMP DOCS RECOMMEND 15 TO 50 REPS */
+	/* GMP docs recommend 15 to 50 reps */
 	int reps = 15;
 	if(mpz_probab_prime_p(a, reps) != 0)
 		return TRUE;
@@ -46,10 +68,43 @@ bool IS_PRIME(mpz_t a){
 		return FALSE;
 }
 
-/*	SAVES KEYS PRODUCED EARLIER TO THE APPROPRIATE FILES
-	PUBLIC KEY 	-> PUBLIC.KEY FILE (FORMAT IS N,D)
-	PRIVATE KEY	-> PRIVATE.KEY FILE (FORMAT IS N,E) */
+void GET_FILE_CONTENT(char ** content, size_t* len){
+	FILE *file = fopen(INPUT_FILE, "r");
+	if(!file){
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : Input file doesn't exist\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		exit(-1);
+	}
+	/*Get file size*/
+	fseek(file, 0, SEEK_END);
+	*len = ftell(file);
+
+	/*Seek back to the start*/
+	rewind(file);
+	*content = malloc( *len);
+	fread(*content, 1, *len, file);
+	
+	fclose(file);
+}
+
+void SAVE_FILE_CONTENT(char* data, long length){
+	FILE *file = fopen(OUTPUT_FILE, "w");
+	if(!file){
+		exit(-1);
+	}
+	fseek(file, 0, SEEK_SET);
+	for(int i = 0; i < length; i++){
+		fputc(data[i], file);
+	}
+	fclose(file);
+}
+
+/*	Save produced keys in the appropriate files
+	Public Key 	-> public.key  (Format is N,D)
+	Private Key	-> private.key (Format is N,E) */
 void SAVE_KEYS(){
+	
 	char * public_key_fname = "public.key";
 	char * private_key_fname = "private.key";
 
@@ -64,114 +119,219 @@ void SAVE_KEYS(){
 	fseek(fpub, 0, SEEK_SET);
 	fseek(fpriv, 0, SEEK_SET);
 
-	unsigned long int n = mpz_get_ui(N), d = mpz_get_si(D), e = mpz_get_ui(E);
+	/* 	
+	Cast the keys to size_t before saving
+	The keys are supposed to be saved in size_t format based on the assignment_1 document
+	The gmp library uses unsigned long.
+	(size_t) to (unsigned long int) conversion, may cause loss of data,
+	but in my case this is safe
+	*/
+
+	size_t n = (size_t) mpz_get_ui(N), d = (size_t) mpz_get_si(D), e = (size_t) mpz_get_ui(E);
 
 	/* Write Public Key */
-	fwrite(&n, sizeof(unsigned long int), 1, fpub);
-	fwrite(&d, sizeof(unsigned long int), 1, fpub);
+	fwrite(&n, sizeof(size_t), 1, fpub);
+	fwrite(&d, sizeof(size_t), 1, fpub);
 
 	/* Write Private Key */
-	fwrite(&n, sizeof(unsigned long int), 1, fpriv);
-	fwrite(&e, sizeof(unsigned long int), 1, fpriv);
+	fwrite(&n, sizeof(size_t), 1, fpriv);
+	fwrite(&e, sizeof(size_t), 1, fpriv);
 
 	fclose(fpub);
 	fclose(fpriv);
 }
 
-void READ_KEYS(char* fname, unsigned long int* a, unsigned long int* b){
-	FILE* file = fopen(fname, "r");
+void READ_KEYS(size_t* a, size_t* b){
+	FILE* file = fopen(KEY_FILE, "r");
 	
 	if(!(file)){
-		printf("_______________________________________\n");
-		printf("Fopen Error : key file doesn't exist\n");
-		printf("_______________________________________\n");
+		
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : Key file doesn't exist\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
 	fseek(file, 0, SEEK_SET);
-	fread(a, sizeof(unsigned long int), 1, file);
-	fread(b, sizeof(unsigned long int), 1, file);
+	fread(a, sizeof(size_t), 1, file);
+	fread(b, sizeof(size_t), 1, file);
 
 	fclose(file);
 }
 
-/*	THIS METHOD MAKES ALL THE NEEDED CALCULATIONS
-	IN ORDER TO PRODUCE KEYS USING THE GMP LIBRARY */
+size_t FIND_E(){
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"Calculating e...\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	size_t cnt = 2;
+	size_t lambda = mpz_get_ui(L);
+	size_t mod,gcd;
+	while(cnt < lambda){
+		mpz_set_ui(tmpA, cnt);
+		if(IS_PRIME(tmpA)){
+			mpz_mod(tmpB, tmpA, L);
+			mpz_gcd(tmpC, tmpA, L);
+			mod = mpz_get_ui(tmpB);
+			gcd = mpz_get_ui(tmpC);
+			printf("e = %zu, lambda = %zu, mod = %zu, gcd = %zu\n",cnt,lambda,mod,gcd);
+			if(mod != 0 && gcd == 1){
+				mpz_set(E, tmpA);
+				break;
+			}
+		}
+		cnt++;
+	}
+}
+
+/*	This function makes all the needed calculations
+	in order to produce the private and public key
+	using the gmp library	
+*/
 void PRODUCE_KEYS(){
-	printf("_______________________________________\n");
-	printf("Generate Keys\n");
-	printf("_______________________________________\n");
-	/* GET Q & P*/
-	/* MAKE SURE THEY ARE PRIMES AND SET GMP VARIABLES */
-	unsigned long int input_Q, input_P;	
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"Generate Keys\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+
+	/*get Q and P then set the GMP variables*/
+	size_t input_Q, input_P;
+	
 	printf("Enter the prime number Q : ");
-	scanf("%lu", &input_Q);
+	scanf("%zu", &input_Q);
 	mpz_set_ui(Q, input_Q);
+
 	while(!IS_PRIME(Q)){
 		printf("Given Q is not a prime number, please type a prime : ");
-		scanf("%lu", &input_Q);
+		scanf("%zu", &input_Q);
 		mpz_set_ui(Q, input_Q);
 	}
+
 	printf("Enter the prime number P : ");
-	scanf("%lu", &input_P);
+	scanf("%zu", &input_P);
 	mpz_set_ui(P, input_P);
+
 	while(!IS_PRIME(P)){
 		printf("Given P is not a prime number, please type a prime : ");
-		scanf("%lu", &input_P);
+		scanf("%zu", &input_P);
 		mpz_set_ui(P, input_P);
 	}
-	/* SET GMP VARIABLES FOR Q-1 & P-1 */
+	/*also set the gmp variables for Q-1 and P-1*/
 	mpz_set_ui(tmpA, input_Q-1);
 	mpz_set_ui(tmpB, input_P-1);
-	/* CALCULATE ( P * Q ) */
+	/*calculate  (P * Q)*/
 	mpz_mul(N, P, Q);
-	/* CALCULATE LAMDA(N) */
+	/*calculate lamda */
 	mpz_mul(L, tmpA, tmpB);
-	/* I CHOSE E = 65537 (MOST COMMON VALUE FOR E) BECAUSE IT HAS 2 BITS SET AND IS IS EFFICIENT FOR MODULAR EXPONENTATION*/ 
-	/* I COULD HAVE CHOSE E = 3 BUT IT IS SHOWN TO BE LESS SECURE IN SOME SETTINGS*/
-	mpz_set_ui(E, 65537);
-	/* E MOD LAMDA(N) */
+	FIND_E(L);
+	/* E mod Lambda */
 	mpz_mod(tmpA, E, L);
-	/* GCD( E, LAMDA(N) ) */
+	/* GCD( E, Lambda ) */
 	mpz_gcd(tmpB, E, L);
-	/* GET RESULTS OF MOD, GCD TO TEST */
-	unsigned long int mod, gcd;
+	/* Get the results of modulation and gcd to check*/
+	size_t mod, gcd;
 	mod = mpz_get_ui(tmpA);
 	gcd = mpz_get_ui(tmpB);
-	/* CALCULATE MODULAR INVERSE OF E,L */
+	/* calculate modular inverse of E, lambda */
 	mpz_invert(D, E, L);
-	/* SETTING INFORMATION */
-	printf("_______________________________________\n");
-	printf("Settings\n");
-	printf("_______________________________________\n");
-	gmp_printf("Q =\t\t\t%Zd\nP =\t\t\t%Zd\n", Q, P);
-	gmp_printf("N =\t\t\t%Zd\n", N);
-	gmp_printf("lambda(N) =\t\t%Zd\n", L);
-	gmp_printf("e =\t\t\t%Zd\n",E);
-	printf("_______________________________________\n");
-	printf("E constaints\n");
-	printf("_______________________________________\n");
-	printf("Mod(e, lambda(N)) =\t%lu\n",mod);
-	printf("GCD(e, lambda(N)) =\t%lu\n",gcd);
-	printf("_______________________________________\n");
-	gmp_printf("D =\t\t\t%Zd\n", D);
-	printf("_______________________________________\n");
+	/* setting information */
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW "Settings\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	gmp_printf("Q =\t\t\t" ANSI_COLOR_GREEN "%Zd\n" ANSI_COLOR_RESET "P =\t\t\t"ANSI_COLOR_GREEN "%Zd\n" ANSI_COLOR_RESET, Q, P);
+	gmp_printf("N =\t\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET, N);
+	gmp_printf("lambda(N) =\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET, L);
+	gmp_printf("e =\t\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET,E);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"e constraints\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf("Mod(e, lambda(N)) =\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,mod);
+	printf("GCD(e, lambda(N)) =\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,gcd);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	gmp_printf("D =\t\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET, D);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 
 	SAVE_KEYS();
 }
 
-
 void RSA_ENCRYPT(){
-	printf("_______________________________________\n");
-	printf("Encrypt\n");
-	printf("_______________________________________\n");
-	unsigned long int n,d;
-	/*Pull public keys from file*/
-	printf("KEY INPUT FILE = %s\n",KEY_FILE);
-	READ_KEYS(KEY_FILE, &n, &d);
-	printf("n = %lu, d = %lu\n",n,d);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"Encryption...\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	
+	size_t p1, p2;
+	/*Pull keys from file*/
+	READ_KEYS(&p1, &p2);
+
+	printf(ANSI_COLOR_YELLOW"Key parts\n(can be (P1,P2)=(n,d) or (P1,P2)=(n,e)\n,depending the key we want to use public/private) \n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	
+	mpz_set_ui(tmpA, p1);	
+	mpz_set_ui(tmpB, p2);	
+
+	char* plain_content;
+	size_t plain_content_len;
+	GET_FILE_CONTENT(&plain_content, &plain_content_len);
+
+	size_t* cipher = malloc( sizeof(size_t) * plain_content_len);
+
+	for(int i = 0; i < plain_content_len; i++){
+		mpz_set_ui(tmpC, (size_t) plain_content[i]); 
+		mpz_powm(tmpD, tmpC, tmpB, tmpA);
+		cipher[i] = (size_t) mpz_get_ui(tmpD);
+	}
+
+	FILE *file = fopen(OUTPUT_FILE, "w");
+	if(!file){
+		exit(-1);
+	}
+	fseek(file, 0, SEEK_SET);
+	fwrite(cipher, sizeof(size_t), plain_content_len, file);
+	fclose(file);
+
+	printf(ANSI_COLOR_YELLOW"Encryption Completed!\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 }
 
+void RSA_DECRYPT(){
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"Decryption...\n"ANSI_COLOR_RESET);
+	size_t p1, p2;
+	READ_KEYS(&p1, &p2);
+
+	mpz_set_ui(tmpA, p1); 
+	mpz_set_ui(tmpB, p2); 
+
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	
+	
+	FILE *file = fopen(INPUT_FILE, "r");
+	if(!file){
+		exit(-1);
+	}
+
+
+	fseek(file, 0, SEEK_END);
+	size_t cipher_bytes = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+
+	size_t plain_content_len = cipher_bytes / sizeof(size_t);
+	size_t* ciphertext = malloc( sizeof(size_t) * plain_content_len);
+	char* plain_content = malloc( sizeof(char) * plain_content_len);
+	fread(ciphertext, sizeof(size_t), plain_content_len, file);
+
+	for(int i = 0; i < plain_content_len; i++){
+		mpz_set_ui(tmpC, (size_t) ciphertext[i]); 
+		mpz_powm(tmpD, tmpC, tmpB, tmpA);
+		plain_content[i] = (char) mpz_get_ui(tmpD);
+	}
+	SAVE_FILE_CONTENT(plain_content, plain_content_len);
+	printf(ANSI_COLOR_YELLOW"Decryption Completed!\n"ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+}
 
 void CHECK_ARGS(){
 	if(GENERATE_KEYS && !ENCRYPT && !DECRYPT && INPUT_FILE==NULL && OUTPUT_FILE==NULL && KEY_FILE ==NULL){
@@ -179,20 +339,17 @@ void CHECK_ARGS(){
 	}else if(ENCRYPT && !GENERATE_KEYS && !DECRYPT && INPUT_FILE != NULL && OUTPUT_FILE != NULL && KEY_FILE !=NULL){
 		RSA_ENCRYPT();
 	}else if(DECRYPT && !GENERATE_KEYS && !ENCRYPT && INPUT_FILE != NULL && OUTPUT_FILE != NULL && KEY_FILE !=NULL){
-		printf("Decrypt\n");
+		RSA_DECRYPT();
 	}else{
 		printf("Wrong command. Please check your command and try again.\n");
 	}
 }
 
-
-
 /*----------------------------------------------------------------------- 
 								MAIN
 ----------------------------------------------------------------------- */
-
 int main(int argc, char *argv[]){
-	mpz_inits(Q, P, N, L, E, D, tmpA, tmpB, NULL);
+	mpz_inits(Q, P, N, L, E, D, tmpA, tmpB, tmpC, tmpD, NULL);
 	int opt;
 	while((opt= getopt(argc, argv, "i:o:k:gdehr")) != -1){
 		switch(opt){
