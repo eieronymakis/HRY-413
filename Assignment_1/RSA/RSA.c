@@ -91,6 +91,9 @@ void GET_FILE_CONTENT(char ** content, size_t* len){
 void SAVE_FILE_CONTENT(char* data, long length){
 	FILE *file = fopen(OUTPUT_FILE, "w");
 	if(!file){
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : Output file doesn't exist\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 	fseek(file, 0, SEEK_SET);
@@ -100,9 +103,11 @@ void SAVE_FILE_CONTENT(char* data, long length){
 	fclose(file);
 }
 
-/*	Save produced keys in the appropriate files
+/*	
+	Save produced keys in the appropriate files
 	Public Key 	-> public.key  (Format is N,D)
-	Private Key	-> private.key (Format is N,E) */
+	Private Key	-> private.key (Format is N,E) 
+*/
 void SAVE_KEYS(){
 	
 	char * public_key_fname = "public.key";
@@ -112,7 +117,9 @@ void SAVE_KEYS(){
 	FILE* fpriv = fopen(private_key_fname, "w");
 
 	if(!(fpub && fpriv)){
-		printf("Key Files Error !");
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : Public/Private key file doesn't exist\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
@@ -163,27 +170,23 @@ size_t FIND_E(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"Calculating e...\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	size_t cnt = 2;
-	size_t lambda = mpz_get_ui(L);
-	size_t mod,gcd;
-	while(cnt < lambda){
-		mpz_set_ui(tmpA, cnt);
+	mpz_set_ui(tmpA,2);
+	while(mpz_cmp(tmpA,L) < 0){
 		if(IS_PRIME(tmpA)){
 			mpz_mod(tmpB, tmpA, L);
 			mpz_gcd(tmpC, tmpA, L);
-			mod = mpz_get_ui(tmpB);
-			gcd = mpz_get_ui(tmpC);
-			printf("e = %zu, lambda = %zu, mod = %zu, gcd = %zu\n",cnt,lambda,mod,gcd);
-			if(mod != 0 && gcd == 1){
+			gmp_printf("e = %Zd, lambda = %Zd, mod = %Zd, gcd = %Zd\n",tmpA,L,tmpB,tmpC);
+			if(mpz_cmp_ui(tmpB, 0) != 0 && mpz_cmp_ui(tmpC, 1) == 0){
 				mpz_set(E, tmpA);
 				break;
 			}
 		}
-		cnt++;
+		mpz_add_ui(tmpA, tmpA,1);
 	}
 }
 
-/*	This function makes all the needed calculations
+/*	
+	This function makes all the needed calculations
 	in order to produce the private and public key
 	using the gmp library	
 */
@@ -215,13 +218,14 @@ void PRODUCE_KEYS(){
 		mpz_set_ui(P, input_P);
 	}
 	/*also set the gmp variables for Q-1 and P-1*/
-	mpz_set_ui(tmpA, input_Q-1);
-	mpz_set_ui(tmpB, input_P-1);
+	mpz_sub_ui(tmpA, Q, 1);
+	mpz_sub_ui(tmpB, P, 1);
 	/*calculate  (P * Q)*/
 	mpz_mul(N, P, Q);
 	/*calculate lamda */
 	mpz_mul(L, tmpA, tmpB);
-	FIND_E(L);
+	/*calculate E based on Lambda*/
+	FIND_E();
 	/* E mod Lambda */
 	mpz_mod(tmpA, E, L);
 	/* GCD( E, Lambda ) */
@@ -328,6 +332,7 @@ void RSA_DECRYPT(){
 		mpz_powm(tmpD, tmpC, tmpB, tmpA);
 		plain_content[i] = (char) mpz_get_ui(tmpD);
 	}
+	
 	SAVE_FILE_CONTENT(plain_content, plain_content_len);
 	printf(ANSI_COLOR_YELLOW"Decryption Completed!\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
@@ -351,7 +356,8 @@ void CHECK_ARGS(){
 int main(int argc, char *argv[]){
 	mpz_inits(Q, P, N, L, E, D, tmpA, tmpB, tmpC, tmpD, NULL);
 	int opt;
-	while((opt= getopt(argc, argv, "i:o:k:gdehr")) != -1){
+
+	while((opt= getopt(argc, argv, "i:o:k:gdeh")) != -1){
 		switch(opt){
 			case 'i':
 				INPUT_FILE = strdup(optarg);
