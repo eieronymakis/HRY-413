@@ -48,9 +48,14 @@ mpz_t tmpB;
 mpz_t tmpC;
 mpz_t tmpD;
 
-/*----------------------------------------------------------------------- 
-						RSA IMPLEMENTATIONS
------------------------------------------------------------------------ */
+
+
+
+/* 
+	RSA IMPLEMENTATION
+*/
+
+
 
 
 /* 
@@ -166,7 +171,7 @@ void READ_KEYS(size_t* a, size_t* b){
 	fclose(file);
 }
 
-size_t FIND_E(){
+void FIND_E(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"Calculating e...\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
