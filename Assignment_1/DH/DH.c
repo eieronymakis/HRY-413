@@ -30,13 +30,18 @@ mpz_t G;    /*  Must be a primitive root of P (above)   */
 mpz_t A;    /*  Private key A   */
 mpz_t B;    /*  Private key B   */
 
-mpz_t PUBLIC_KEY_OF_A;
-mpz_t PUBLIC_KEY_OF_B;
+mpz_t PUBLIC_KEY_OF_A; /* Public key produced by A */
+mpz_t PUBLIC_KEY_OF_B; /* Public key produced by B */
 
-mpz_t SECRET_OF_A;
-mpz_t SECRET_OF_B;
+mpz_t SECRET_OF_A; /* Secret computed by A using the public key of B */
+mpz_t SECRET_OF_B; /* Secret computed by B using the public key of A */
 
 
+/* Temporaries used for calculations */
+mpz_t tmpA;
+
+
+/* Saves <PUBLIC_KEY_A><PUBLIC_KEY_B><SHARED_SECRET> to file*/
 void SAVE_TO_FILE(){
     FILE *file = fopen(OUTPUT_FILE, "w");
     if(!file){
@@ -73,15 +78,26 @@ bool IS_PRIME(mpz_t a){
 		return FALSE;
 }
 
+/* 
+    Create the public key using the modular exponentation function of GMP lib mpz_powm(PUBLIC_KEY_RESULT, G, SECRET_NUMBER, P)
+    MY PUBLIC KEY = ( G ^(my secret number) ) modulo P
+*/
 void CREATE_PUBLIC_KEY(mpz_t SECRET, mpz_t OUTPUT){
     mpz_powm(OUTPUT, G, SECRET, P);
 }
-
+/*
+    Compute the secret using modular exponentation
+    MY SECRET =  ( ( my secret number )^( other side public key ) ) modulo P
+    If computed secrets on each side are different then something is wrong.
+*/
 void COMPUTE_SECRET(mpz_t PUBLIC_KEY, mpz_t SECRET_NUMBER,mpz_t OUTPUT){
     mpz_powm(OUTPUT, PUBLIC_KEY, SECRET_NUMBER, P);
 }
 
-void PRODUCE_SECRET(){
+/* 
+    This function compares the end results 
+*/
+void START(){
     printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW "Settings\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
@@ -90,10 +106,10 @@ void PRODUCE_SECRET(){
     gmp_printf("A =\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET, A);
     gmp_printf("B =\t\t"ANSI_COLOR_GREEN"%Zd\n"ANSI_COLOR_RESET, B);
     printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW "Producing Secret...\n" ANSI_COLOR_RESET);
-    printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
     
-    
+    /* 
+        Compute public keys of A and B
+    */
     CREATE_PUBLIC_KEY(A, PUBLIC_KEY_OF_A);
     CREATE_PUBLIC_KEY(B, PUBLIC_KEY_OF_B);
 
@@ -103,6 +119,9 @@ void PRODUCE_SECRET(){
     gmp_printf( "Public key of B =\t\t" ANSI_COLOR_GREEN "%Zd\n" ANSI_COLOR_RESET, PUBLIC_KEY_OF_B);
     printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 
+    /*
+        Compute the secret of side A using the pubic key of B and vise versa
+    */
     COMPUTE_SECRET(PUBLIC_KEY_OF_B, A, SECRET_OF_A);
     COMPUTE_SECRET(PUBLIC_KEY_OF_A, B, SECRET_OF_B);
 
@@ -113,22 +132,39 @@ void PRODUCE_SECRET(){
     printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 
 
+    /* 
+        Check if the computed secret on each side is the same (shared secret).
+    */
     if(mpz_cmp(SECRET_OF_A, SECRET_OF_B) == 0){
         printf(ANSI_COLOR_GREEN"_______________________________________\n"ANSI_COLOR_RESET);
 	    printf(ANSI_COLOR_GREEN "Secrets match\n" ANSI_COLOR_RESET);
 	    printf(ANSI_COLOR_GREEN"_______________________________________\n"ANSI_COLOR_RESET);
 
         SAVE_TO_FILE();
-
     }else{
         printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 	    printf(ANSI_COLOR_RED "Error : Secrets don't match\n" ANSI_COLOR_RESET);
 	    printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
     }
+}
 
-    
-}   
+/*
+    Checks if b is definetely not primitive root mod a.
+    For a number X to be a primitive root mod Y two of the constraints are :
+        ->  gcd(X,Y) = 1
+        ->  0 <= X < Y
+*/
+bool IS_PRIMITIVE_ROOT(mpz_t A, mpz_t B){
+    mpz_gcd(tmpA,A,B);
+    if((mpz_cmp(A, B)) <= 0 != (mpz_cmp_ui(tmpA, 1) != 0)){
+        return FALSE;
+    }
+    return TRUE;
+}
 
+/*
+    Process the arguments given in the command line
+*/
 void CHECK_ARGS(){
     bool false_arguments = FALSE;
     if(!IS_PRIME(P)){
@@ -149,16 +185,23 @@ void CHECK_ARGS(){
 		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
         false_arguments = TRUE;
     }
+    if((!IS_PRIMITIVE_ROOT(P, G)) != (mpz_cmp_ui(G,0)< 0)){
+        printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Argument Error : G is definetely not a primitive root of P\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+        false_arguments = TRUE;
+    }
+    
 
     if(false_arguments)
-        return;
+        exit(-1);
 
-    PRODUCE_SECRET();
+    START();
 }
 
 int main(int argc, char *argv[]){
 
-    mpz_inits(P, G, A, B, PUBLIC_KEY_OF_A, PUBLIC_KEY_OF_B, SECRET_OF_A, SECRET_OF_B, NULL);
+    mpz_inits(P, G, A, B, PUBLIC_KEY_OF_A, PUBLIC_KEY_OF_B, SECRET_OF_A, SECRET_OF_B, tmpA, NULL);
 
 	int opt;
 	while((opt= getopt(argc, argv, "o:p:g:a:b:h")) != -1){
@@ -184,6 +227,7 @@ int main(int argc, char *argv[]){
 				return 0;
 		}
 	}
+
 	CHECK_ARGS();
     return 0;
 }

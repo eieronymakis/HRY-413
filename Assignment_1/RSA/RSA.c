@@ -56,8 +56,6 @@ mpz_t tmpD;
 */
 
 
-
-
 /* 
 	Check if a number is prime,
 	using the GMP library function mpz_probap_prime(),
@@ -73,6 +71,9 @@ bool IS_PRIME(mpz_t a){
 		return FALSE;
 }
 
+/* 
+	Saves the plain text read from the input file in the array which content ptr is pointing.
+*/
 void GET_FILE_CONTENT(char ** content, size_t* len){
 	FILE *file = fopen(INPUT_FILE, "r");
 	if(!file){
@@ -93,6 +94,9 @@ void GET_FILE_CONTENT(char ** content, size_t* len){
 	fclose(file);
 }
 
+/*
+	Saves decrypted plain text to the output file
+*/
 void SAVE_FILE_CONTENT(char* data, long length){
 	FILE *file = fopen(OUTPUT_FILE, "w");
 	if(!file){
@@ -153,6 +157,9 @@ void SAVE_KEYS(){
 	fclose(fpriv);
 }
 
+/* 
+	Sets the keys read from the key input file
+*/
 void READ_KEYS(size_t* a, size_t* b){
 	FILE* file = fopen(KEY_FILE, "r");
 	
@@ -171,10 +178,22 @@ void READ_KEYS(size_t* a, size_t* b){
 	fclose(file);
 }
 
+/*
+	From lectures we know that an e constraints are: 
+		->		1 < e < lambda
+		->		e is prime
+		-> 		e % lambda != 0 
+		->		gcd(e,lambda) = 1
+	Given these using a for loop in range [2, lambda -1], I check if the number is prime using GMP lib,
+	if it satisfies the last 2 constraints then I set e as that number.
+	This method is not optimal since e is not random but it's enough for this case.
+*/
+
 void FIND_E(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"Calculating e...\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+
 	mpz_set_ui(tmpA,2);
 	while(mpz_cmp(tmpA,L) < 0){
 		if(IS_PRIME(tmpA)){
@@ -207,6 +226,7 @@ void PRODUCE_KEYS(){
 	scanf("%zu", &input_Q);
 	mpz_set_ui(Q, input_Q);
 
+	/* Q prime check */
 	while(!IS_PRIME(Q)){
 		printf("Given Q is not a prime number, please type a prime : ");
 		scanf("%zu", &input_Q);
@@ -217,31 +237,41 @@ void PRODUCE_KEYS(){
 	scanf("%zu", &input_P);
 	mpz_set_ui(P, input_P);
 
+	/* P prime check */
 	while(!IS_PRIME(P)){
 		printf("Given P is not a prime number, please type a prime : ");
 		scanf("%zu", &input_P);
 		mpz_set_ui(P, input_P);
 	}
+
 	/*also set the gmp variables for Q-1 and P-1*/
 	mpz_sub_ui(tmpA, Q, 1);
 	mpz_sub_ui(tmpB, P, 1);
+
 	/*calculate  (P * Q)*/
 	mpz_mul(N, P, Q);
+	
 	/*calculate lamda */
 	mpz_mul(L, tmpA, tmpB);
+
 	/*calculate E based on Lambda*/
 	FIND_E();
+
 	/* E mod Lambda */
 	mpz_mod(tmpA, E, L);
+
 	/* GCD( E, Lambda ) */
 	mpz_gcd(tmpB, E, L);
+
 	/* Get the results of modulation and gcd to check*/
 	size_t mod, gcd;
 	mod = mpz_get_ui(tmpA);
 	gcd = mpz_get_ui(tmpB);
+
 	/* calculate modular inverse of E, lambda */
 	mpz_invert(D, E, L);
-	/* setting information */
+
+	/* Print setting information */
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW "Settings\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
@@ -261,29 +291,41 @@ void PRODUCE_KEYS(){
 	SAVE_KEYS();
 }
 
+/* 
+	This method reads the keys from the given key file, then creates an encrypted object (size_t) array.
+	Takes each character from the given plain text input file and uses GMP's modular exponentation method mpz_powm(result, base, exp, modulo) to encrypt it.
+	Stores each encrypted object in the array I created and then writes the array in the output file.
+
+	Warning: the key you use for encryption will be your private key.
+*/
+
 void RSA_ENCRYPT(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"Encryption...\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	
+	/*Get keys from file*/
 	size_t p1, p2;
-	/*Pull keys from file*/
 	READ_KEYS(&p1, &p2);
+	mpz_set_ui(tmpA, p1);	
+	mpz_set_ui(tmpB, p2);	
 
 	printf(ANSI_COLOR_YELLOW"Key parts\n(can be (P1,P2)=(n,d) or (P1,P2)=(n,e)\n,depending the key we want to use public/private) \n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	
-	mpz_set_ui(tmpA, p1);	
-	mpz_set_ui(tmpB, p2);	
-
+	/* Array storing the given input (text) */
 	char* plain_content;
 	size_t plain_content_len;
+	/* Get plain text */
 	GET_FILE_CONTENT(&plain_content, &plain_content_len);
 
-	size_t* cipher = malloc( sizeof(size_t) * plain_content_len);
 
+	/* Array storing the encrypted objects, size of 8 (size_t) * n (n = number of characters in plain text) bytes */
+	size_t* cipher = malloc( sizeof(size_t) * plain_content_len); 
+
+	/* Encrypt each plain text character with modular exponentation and store it in the encrypted object array */
 	for(int i = 0; i < plain_content_len; i++){
 		mpz_set_ui(tmpC, (size_t) plain_content[i]); 
 		mpz_powm(tmpD, tmpC, tmpB, tmpA);
@@ -292,8 +334,14 @@ void RSA_ENCRYPT(){
 
 	FILE *file = fopen(OUTPUT_FILE, "w");
 	if(!file){
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : could not open output file.\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
+
+	/* Write the encrypted object array in the output file */
+	/* Output file should have size of 8 * (plain text char count) bytes */
 	fseek(file, 0, SEEK_SET);
 	fwrite(cipher, sizeof(size_t), plain_content_len, file);
 	fclose(file);
@@ -302,12 +350,22 @@ void RSA_ENCRYPT(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 }
 
+/*
+	This method firstly reads the keys from the file given in the command line as option k.
+	Then reads the encrypted file and produces a an array of characters which will store the decrypted text.
+	Using a for loop based on the number of encrypted size_t objects, each one of these objects gets decrypted to a char using the modular exponentation method.
+	Modular exponent is produced with GMP's command mpz_powm(result, base, exp, modulo).
+	After everything is done save the character array to the output file given in the command line which results to the original plain text.
+	
+	Warning : in order to decrypt the encrypted file, you have to use the public key if you used the private key for encryption (or the other way around).
+*/
 void RSA_DECRYPT(){
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"Decryption...\n"ANSI_COLOR_RESET);
+	
+	/* Set key values from file */
 	size_t p1, p2;
 	READ_KEYS(&p1, &p2);
-
 	mpz_set_ui(tmpA, p1); 
 	mpz_set_ui(tmpB, p2); 
 
@@ -318,38 +376,56 @@ void RSA_DECRYPT(){
 	
 	FILE *file = fopen(INPUT_FILE, "r");
 	if(!file){
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"Fopen Error : could not open encrypted file.\n"   ANSI_COLOR_RESET);
+		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
-
+	/* Get encypted file byte length */
 	fseek(file, 0, SEEK_END);
 	size_t cipher_bytes = ftell(file);
 	fseek(file, 0, SEEK_SET);
 
-
+	/* Get the amount of characters the output plain text file will have by dividing the bytes of encrypted file with the size of encrypted object*/
 	size_t plain_content_len = cipher_bytes / sizeof(size_t);
-	size_t* ciphertext = malloc( sizeof(size_t) * plain_content_len);
+	/* Array for the encrypted objects */
+	size_t* cipher = malloc( sizeof(size_t) * plain_content_len);
+	/* Initialize the char array for the decrypted characters */
 	char* plain_content = malloc( sizeof(char) * plain_content_len);
-	fread(ciphertext, sizeof(size_t), plain_content_len, file);
+	/* Get the encrypted objects */
+	fread(cipher, sizeof(size_t), plain_content_len, file);
+	
 
+	/* Get the decrypted object (char) from the modular exponent of the encrypted object (size_t) */
 	for(int i = 0; i < plain_content_len; i++){
-		mpz_set_ui(tmpC, (size_t) ciphertext[i]); 
+		mpz_set_ui(tmpC, (size_t) cipher[i]); 
 		mpz_powm(tmpD, tmpC, tmpB, tmpA);
 		plain_content[i] = (char) mpz_get_ui(tmpD);
 	}
 	
+	/* Save decrypted text to file */
 	SAVE_FILE_CONTENT(plain_content, plain_content_len);
+
 	printf(ANSI_COLOR_YELLOW"Decryption Completed!\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 }
 
+
+/*
+	Function used to process the inputs passed from the command line
+*/
 void CHECK_ARGS(){
+	/* This combination means I want to generate keys */
 	if(GENERATE_KEYS && !ENCRYPT && !DECRYPT && INPUT_FILE==NULL && OUTPUT_FILE==NULL && KEY_FILE ==NULL){
 		PRODUCE_KEYS();
+	/* This combination means I want to encrypt a plain text file */
 	}else if(ENCRYPT && !GENERATE_KEYS && !DECRYPT && INPUT_FILE != NULL && OUTPUT_FILE != NULL && KEY_FILE !=NULL){
 		RSA_ENCRYPT();
+	/* This combination means I want to decrypt an encrypted file */
 	}else if(DECRYPT && !GENERATE_KEYS && !ENCRYPT && INPUT_FILE != NULL && OUTPUT_FILE != NULL && KEY_FILE !=NULL){
 		RSA_DECRYPT();
+	/* What happens in every other case*/
 	}else{
 		printf("Wrong command. Please check your command and try again.\n");
 	}
@@ -362,6 +438,8 @@ int main(int argc, char *argv[]){
 	mpz_inits(Q, P, N, L, E, D, tmpA, tmpB, tmpC, tmpD, NULL);
 	int opt;
 
+
+	/* Get the arguments passed from the command line and initialize globals */
 	while((opt= getopt(argc, argv, "i:o:k:gdeh")) != -1){
 		switch(opt){
 			case 'i':
@@ -388,6 +466,7 @@ int main(int argc, char *argv[]){
 				return 0;
 		}
 	}
+
 	CHECK_ARGS();
 }
 
