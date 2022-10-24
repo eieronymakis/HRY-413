@@ -219,29 +219,24 @@ void PRODUCE_KEYS(){
 	printf(ANSI_COLOR_YELLOW"Generate Keys\n"ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 
-	/*get Q and P then set the GMP variables*/
-	size_t input_Q, input_P;
+	/*get Q and P*/
 	
 	printf("Enter the prime number Q : ");
-	scanf("%zu", &input_Q);
-	mpz_set_ui(Q, input_Q);
+	gmp_scanf("%Zd", Q);
 
 	/* Q prime check */
 	while(!IS_PRIME(Q)){
 		printf("Given Q is not a prime number, please type a prime : ");
-		scanf("%zu", &input_Q);
-		mpz_set_ui(Q, input_Q);
+		gmp_scanf("%Zd", Q);
 	}
 
 	printf("Enter the prime number P : ");
-	scanf("%zu", &input_P);
-	mpz_set_ui(P, input_P);
+	gmp_scanf("%Zd", P);
 
 	/* P prime check */
 	while(!IS_PRIME(P)){
 		printf("Given P is not a prime number, please type a prime : ");
-		scanf("%zu", &input_P);
-		mpz_set_ui(P, input_P);
+		gmp_scanf("%Zd", P);
 	}
 
 	/*also set the gmp variables for Q-1 and P-1*/
