@@ -457,9 +457,9 @@ int main(int argc, char *argv[]){
 				break;
 			case 'h':
 				printf("Options :\n-i INPUT_FILE\n-o OUTPUT_FILE\n-k KEY_FILE\n-g GENERATE KEYS MODE\n-d DECRYPT MODE\n-e ENCRYPT MODE\n");
-				printf("-e and -d options need -i -o -k arguments to work\n");
-				printf("-g is strictly used without any other options\n");
-				break;
+				printf("Important : -e and -d options need -i -o -k arguments to work\n");
+				printf("Important : -g is strictly used without any other options\n");
+				return 0;
 			default:
 				return 0;
 		}

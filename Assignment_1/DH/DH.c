@@ -222,7 +222,9 @@ int main(int argc, char *argv[]){
                 mpz_set_ui(B,(size_t) atoi(optarg));
 				break;
             case 'h':
-				break;
+                printf("Options :\n-o Ouput file\n-p Prime number p\n-g G number (primitive root of previous)\n-a Private key A\n-b Private key b\n");
+                printf("Important : All option arguments are needed for the tool to work!\n");
+				return 0;
 			default:
 				return 0;
 		}
