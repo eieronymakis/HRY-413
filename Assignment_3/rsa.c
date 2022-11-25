@@ -48,9 +48,6 @@ mpz_t tmpB;
 mpz_t tmpC;
 mpz_t tmpD;
 
-
-
-
 /* 
 	RSA IMPLEMENTATION
 */
@@ -71,15 +68,16 @@ bool IS_PRIME(mpz_t a){
 		return FALSE;
 }
 
+
 /* 
 	Saves the plain text read from the input file in the array which content ptr is pointing.
 */
 void GET_FILE_CONTENT(char ** content, size_t* len){
 	FILE *file = fopen(INPUT_FILE, "r");
 	if(!file){
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : Input file doesn't exist\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : Input file doesn't exist\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 	/*Get file size*/
@@ -100,9 +98,9 @@ void GET_FILE_CONTENT(char ** content, size_t* len){
 void SAVE_FILE_CONTENT(char* data, long length){
 	FILE *file = fopen(OUTPUT_FILE, "w");
 	if(!file){
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : Output file doesn't exist\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : Output file doesn't exist\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 	fseek(file, 0, SEEK_SET);
@@ -126,9 +124,9 @@ void SAVE_KEYS(){
 	FILE* fpriv = fopen(private_key_fname, "w");
 
 	if(!(fpub && fpriv)){
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : Public/Private key file doesn't exist\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : Public/Private key file doesn't exist\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
@@ -164,10 +162,9 @@ void READ_KEYS(size_t* a, size_t* b){
 	FILE* file = fopen(KEY_FILE, "r");
 	
 	if(!(file)){
-		
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : Key file doesn't exist\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : Key file doesn't exist\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
@@ -295,9 +292,9 @@ void PRODUCE_KEYS(){
 */
 
 void RSA_ENCRYPT(){
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"Encryption...\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"Encryption...\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	
 	/*Get keys from file*/
 	size_t p1, p2;
@@ -305,10 +302,10 @@ void RSA_ENCRYPT(){
 	mpz_set_ui(tmpA, p1);	
 	mpz_set_ui(tmpB, p2);	
 
-	printf(ANSI_COLOR_YELLOW"Key parts\n(can be (P1,P2)=(n,d) or (P1,P2)=(n,e)\n,depending the key we want to use public/private) \n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"Key parts\n(can be (P1,P2)=(n,d) or (P1,P2)=(n,e)\n,depending the key we want to use public/private) \n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	
 	/* Array storing the given input (text) */
 	char* plain_content;
@@ -329,9 +326,9 @@ void RSA_ENCRYPT(){
 
 	FILE *file = fopen(OUTPUT_FILE, "w");
 	if(!file){
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : could not open output file.\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : could not open output file.\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
@@ -341,8 +338,8 @@ void RSA_ENCRYPT(){
 	fwrite(cipher, sizeof(size_t), plain_content_len, file);
 	fclose(file);
 
-	printf(ANSI_COLOR_YELLOW"Encryption Completed!\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"Encryption Completed!\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 }
 
 /*
@@ -355,8 +352,8 @@ void RSA_ENCRYPT(){
 	Warning : in order to decrypt the encrypted file, you have to use the public key if you used the private key for encryption (or the other way around).
 */
 void RSA_DECRYPT(){
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"Decryption...\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"Decryption...\n"ANSI_COLOR_RESET);
 	
 	/* Set key values from file */
 	size_t p1, p2;
@@ -364,16 +361,16 @@ void RSA_DECRYPT(){
 	mpz_set_ui(tmpA, p1); 
 	mpz_set_ui(tmpB, p2); 
 
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
-	printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf("P1 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET"P2 =\t\t\t"ANSI_COLOR_GREEN"%zu\n"ANSI_COLOR_RESET,p1,p2);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 	
 	
 	FILE *file = fopen(INPUT_FILE, "r");
 	if(!file){
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"Fopen Error : could not open encrypted file.\n"   ANSI_COLOR_RESET);
-		printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"Fopen Error : could not open encrypted file.\n"   ANSI_COLOR_RESET);
+		// printf(ANSI_COLOR_RED"_______________________________________\n"ANSI_COLOR_RESET);
 		exit(-1);
 	}
 
@@ -402,8 +399,8 @@ void RSA_DECRYPT(){
 	/* Save decrypted text to file */
 	SAVE_FILE_CONTENT(plain_content, plain_content_len);
 
-	printf(ANSI_COLOR_YELLOW"Decryption Completed!\n"ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"Decryption Completed!\n"ANSI_COLOR_RESET);
+	// printf(ANSI_COLOR_YELLOW"_______________________________________\n"ANSI_COLOR_RESET);
 }
 
 
@@ -430,10 +427,10 @@ void CHECK_ARGS(){
 								MAIN
 ----------------------------------------------------------------------- */
 int main(int argc, char *argv[]){
+
 	mpz_inits(Q, P, N, L, E, D, tmpA, tmpB, tmpC, tmpD, NULL);
 	int opt;
-
-
+    
 	/* Get the arguments passed from the command line and initialize globals */
 	while((opt= getopt(argc, argv, "i:o:k:gdeh")) != -1){
 		switch(opt){
@@ -467,6 +464,5 @@ int main(int argc, char *argv[]){
 
 	CHECK_ARGS();
 }
-
 
 

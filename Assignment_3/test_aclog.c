@@ -32,28 +32,14 @@ int main()
 	/* ... */
 	/* ... */
 
-	file = fopen(filenames[0], "r");
-	if(file == NULL)
-		printf("fopen() error\n");
-	else{
-		bytes = fwrite(filenames[0], strlen(filenames[0]), 1, file);
-		bytes = fwrite(filenames[0], strlen(filenames[0]), 1, file);
-		bytes = fwrite(filenames[0], strlen(filenames[0]), 1, file);
-		bytes = fwrite(filenames[0], strlen(filenames[0]), 1, file);
-		bytes = fwrite(filenames[0], strlen(filenames[0]), 1, file);
-		fclose(file);
-	}
-
-	file = fopen(filenames[1], "r+");
-	if(file == NULL)
-		printf("fopen() error\n");
-	else{
-		bytes = fwrite(filenames[1], strlen(filenames[1]), 1, file);
-		bytes = fwrite(filenames[1], strlen(filenames[1]), 1, file);
-		bytes = fwrite(filenames[1], strlen(filenames[1]), 1, file);
-		bytes = fwrite(filenames[1], strlen(filenames[1]), 1, file);
-		bytes = fwrite(filenames[1], strlen(filenames[1]), 1, file);
-		fclose(file);
+	for (i = 0; i < 10; i++) {
+		file = fopen(filenames[i], "r");
+		if(file == NULL)
+			printf("fopen() error\n");
+		else{
+			bytes = fwrite(filenames[i], strlen(filenames[0]), 1, file);
+			fclose(file);
+		}
 	}
 
 }
