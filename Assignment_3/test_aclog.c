@@ -12,9 +12,12 @@ int main()
 			"file_8", "file_9"};
 
 
-	/* example source code */
+	int filesToProccess = 1;
 
-	for (i = 0; i < 10; i++) {
+
+	/* File 0-10 Creation */
+
+	for (i = 0; i < filesToProccess; i++) {
 
 		file = fopen(filenames[i], "w+");
 		if (file == NULL) 
@@ -26,20 +29,49 @@ int main()
 
 	}
 
-	/* add your code here */
-	/* ... */
-	/* ... */
-	/* ... */
-	/* ... */
+	/* File 0-10 Append (Write but not erase) */
 
-	for (i = 0; i < 10; i++) {
-		file = fopen(filenames[i], "r");
-		if(file == NULL)
-			printf("fopen() error\n");
-		else{
-			bytes = fwrite(filenames[i], strlen(filenames[0]), 1, file);
+	for(int i = 0; i < filesToProccess; i++){
+
+		file = fopen(filenames[i], "a");
+		if (file == NULL) 
+			printf("fopen error\n");
+		else {
+			bytes = fwrite(filenames[i], strlen(filenames[i]), 1, file);
 			fclose(file);
 		}
+
 	}
+
+	/* File 0-10 Read Only */
+
+	for(int i = 0; i < filesToProccess; i++){
+
+		file = fopen(filenames[i], "r");
+		if (file == NULL) 
+			printf("fopen error\n");
+		else {
+			bytes = fwrite(filenames[i], strlen(filenames[i]), 1, file);
+			fclose(file);
+		}
+
+	}
+
+	/* Files already exist so this is deletion (previous contents are going to be erased ) */
+	for(int i = 0; i < filesToProccess; i++){
+
+		file = fopen(filenames[i], "w+");
+		if (file == NULL) 
+			printf("fopen error\n");
+		else {
+			bytes = fwrite(filenames[i], strlen(filenames[i]), 1, file);
+			fclose(file);
+		}
+
+	}
+
+
+
+
 
 }
