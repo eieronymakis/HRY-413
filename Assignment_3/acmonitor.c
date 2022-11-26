@@ -7,17 +7,28 @@
 #include <sys/types.h>
 #include <pwd.h>
 
-typedef struct entry {
+/* 
+	Colors for stdout
+*/
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
+typedef struct entry {
 	int uid; /* user id (positive integer) */
 	int access_type; /* access type values [0-2] */
 	int action_denied; /* is action denied values [0-1] */
-
-	char * date_time;
-
+	char * datetime;
 	char *file; /* filename (string) */
 	char *fingerprint; /* file fingerprint */
 } entry;
+
+typedef enum {FALSE = 0, TRUE = !FALSE} BOOL;
+
 
 void usage(void){
 	printf(
@@ -34,12 +45,11 @@ void usage(void){
 	exit(1);
 }
 
+void printEntry(entry e){
+	printf("%d\t%d\t%d\t%s\t%s\t%s\n",e.uid,e.access_type,e.action_denied,e.datetime, e.file, e.fingerprint);
+}
 
-// void printEntry(entry e){
-// 	printf("%d %d %d %s %s%s\n",e.uid,e.access_type,e.action_denied,e.date_time,e.file,e.fingerprint);
-// }
-
-void importEntries(FILE * log, entry * data, int count){
+void importData(FILE * log, entry * data, int count){
 
 	for(int i = 0; i < count; i++){
 		char * l;
@@ -47,10 +57,10 @@ void importEntries(FILE * log, entry * data, int count){
 		getline(&l, &l_len, log);
 		data[i].uid = atoi( strtok (l, "\t"));
 		data[i].access_type = atoi (strtok (NULL, "\t"));
-		data[i].action_denied = atoi (strtok (NULL, "\t"));
-		data[i].file = strtok( NULL, "\t");
+		data[i].action_denied = atoi(strtok (NULL, "\t"));
+		data[i].file = strtok(NULL, "\t");
 		data[i].fingerprint = strtok( NULL, "\t");
-		data[i].date_time = strtok(NULL, "\t");
+		data[i].datetime = strtok(NULL, "\t");
 	}
 
 	return;
@@ -59,94 +69,67 @@ void importEntries(FILE * log, entry * data, int count){
 
 void list_unauthorized_accesses(FILE *log){
 
-	int count = 0;
+	int entryCount = 0;
 	while(EOF != (fscanf(log, "%*[^\n]"), fscanf(log, "%*c")))
-		count++;
+		entryCount++;
 	fseek(log, 0, SEEK_SET); 
 
-	entry data[count];
-	importEntries(log, data, count);
+	entry data[entryCount];
+	importData(log, data, entryCount);
 
-	int num_users = 0;
-	int users[count];
+	int uniqueUsers = 0;
+	int users[entryCount];
 
-	for(int i = 0; i < count; i++){
-		int dup = 0;
-
-		for(int k = 0; k < num_users; k++){
-			if(data[i].uid == users[k])
-				dup = 1;
-		}
-
-		if(dup == 0){
-			users[num_users] = data[i].uid;
-			num_users++;
+	for(int i = 0; i < entryCount; i++){
+		BOOL exists = FALSE;
+		for(int j = 0; j < uniqueUsers; j++)
+			if(data[i].uid == users[j])
+				exists = TRUE;
+		if(!exists){
+			users[uniqueUsers] = data[i].uid;
+			uniqueUsers++;
 		}
 	}
 
-	int unauth[num_users];
-	for(int i = 0; i < num_users; i++){
-		unauth[i] = 0;
-	}
-
-	for(int i = 0; i < count; i++){
-		if(data[i].action_denied == 1){
-			for(int k = 0; k < num_users; k++){
-				if(data[i].uid == users[k]){
-					unauth[k]++;
+	BOOL unAuthorized[uniqueUsers];
+	for(int i = 0; i < uniqueUsers; i++)
+		unAuthorized[i] = FALSE;
+	printf(ANSI_COLOR_GREEN"--------------------------------------------------------------\n"ANSI_COLOR_RESET);
+	printf("Malicious Users : \n");
+	printf(ANSI_COLOR_GREEN"--------------------------------------------------------------\n"ANSI_COLOR_RESET);
+	printf("UID\t|\tUser Name\n");
+	printf(ANSI_COLOR_GREEN"--------------------------------------------------------------\n"ANSI_COLOR_RESET);
+	for(int i = 0; i < uniqueUsers; i++){
+		char files[8][100] = {'\0','\0','\0','\0','\0','\0','\0'};
+		int forbiddenAccesses = 0;
+		int entryIndex = 0;
+		while(forbiddenAccesses < 8 && entryIndex < entryCount){
+			if(data[entryIndex].uid==users[i] && data[entryIndex].action_denied == 1){
+				BOOL exists = FALSE;
+				for(int j = 0; j < 8; j++)
+					if(strcmp(files[j],data[entryIndex].file) == 0)
+						exists = TRUE;
+				if(!exists){
+					strcpy(files[forbiddenAccesses],data[entryIndex].file);
+					forbiddenAccesses++;
 				}
 			}
+			entryIndex++;
+		}
+		if(forbiddenAccesses >= 8){
+			unAuthorized[i] = TRUE;
+			printf(ANSI_COLOR_RED"%d"ANSI_COLOR_RESET"\t|\t"ANSI_COLOR_RED"%s\n"ANSI_COLOR_RESET, users[i] ,getpwuid( users[i] ) -> pw_name);
 		}
 	}
-
-	for(int i = 0; i < num_users; i++){
-		if(unauth[i] > 7)
-			printf("%s\n", getpwuid( users[i] ) -> pw_name);
-	}
+	printf(ANSI_COLOR_GREEN"--------------------------------------------------------------\n"ANSI_COLOR_RESET);
 
 	return;
-
 }
 
 
 void list_file_modifications(FILE *log, char *file_to_scan){
 
-	
-	int count = 0;
-	while(EOF != (fscanf(log, "%*[^\n]"), fscanf(log, "%*c")))
-		count++;
-	fseek(log, 0, SEEK_SET); 
-
-	entry data[count];
-	importEntries(log, data, count);
-
-	int num_users = 0;
-	int users[count];
-
-	for(int i = 0; i < count; i++){
-		int dup = 0;
-		for(int k = 0; k <  num_users; k++){
-			if(data[i].uid == users[k])
-				dup = 1;
-		}
-
-		if(dup == 1){
-			users[num_users] = data[i].uid;
-			num_users++;
-		}
-	}
-
-	int chan[num_users];
-	for(int i = 0; i < num_users; i++){
-		chan[i] = 0;
-	}
-
-	char actual_path;
-
-
-
 	return;
-
 }
 
 int main(int argc, char *argv[]){

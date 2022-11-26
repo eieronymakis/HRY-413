@@ -12,10 +12,10 @@ int main()
 			"file_8", "file_9"};
 
 
-	int filesToProccess = 1;
+	int filesToProccess = 10;
 
 
-	/* File 0-10 Creation */
+	/* File 0-10 Creation and write (Creation, Write) */
 
 	for (i = 0; i < filesToProccess; i++) {
 
@@ -29,9 +29,9 @@ int main()
 
 	}
 
-	/* File 0-10 Append (Write but not erase) */
 
-	for(int i = 0; i < filesToProccess; i++){
+	/* File open with append mode and write (Read,Write)*/
+	for (i = 0; i < filesToProccess; i++) {
 
 		file = fopen(filenames[i], "a");
 		if (file == NULL) 
@@ -43,7 +43,8 @@ int main()
 
 	}
 
-	/* File 0-10 Read Only */
+
+	/* File 0-10 Read Only (Read) */
 
 	for(int i = 0; i < filesToProccess; i++){
 
@@ -51,13 +52,12 @@ int main()
 		if (file == NULL) 
 			printf("fopen error\n");
 		else {
-			bytes = fwrite(filenames[i], strlen(filenames[i]), 1, file);
 			fclose(file);
 		}
 
 	}
 
-	/* Files already exist so this is deletion (previous contents are going to be erased ) */
+	/* Previous content is going to be erased file already exists (Delete, Write)*/
 	for(int i = 0; i < filesToProccess; i++){
 
 		file = fopen(filenames[i], "w+");
