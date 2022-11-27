@@ -92,15 +92,10 @@ FILE * fopen(const char *path, const char *mode){
 		DENIED = TRUE;
 	}
 
-	/* Get  the absolute path of the file */
-	char ABSOLUTE_PATH[PATH_MAX+1];
-	realpath(path, ABSOLUTE_PATH);
-
 	/* Setup length variable and buffer for file read */
 	int len = 0;
 	char * buffer;
 	
-
 	/* 
 		If someone without privileges tried to access the file then we can't get the MD5 hash
 		I open the file as read in order to get the MD5 hash.
@@ -122,7 +117,7 @@ FILE * fopen(const char *path, const char *mode){
 		len = ftell(original_fopen_ret);
 		/* SEEK to Start */
 		fseek(original_fopen_ret, 0, SEEK_SET);
-		buffer = malloc(len);
+		buffer = malloc(len * sizeof(char));
 		/* Read contents of file and write in the buffer */
 		fread(buffer, 1, len, original_fopen_ret);
 		/* Reset SEEK position */
@@ -156,7 +151,7 @@ FILE * fopen(const char *path, const char *mode){
 
 	/* Log the event */
 
-	fprintf(LOG_FILE, "%d\t%d\t%d\t%s\t%s\t%s", UID, A_TYPE, DENIED, ABSOLUTE_PATH, HASH_STRING, ctime(&now));
+	fprintf(LOG_FILE, "%d\t%d\t%d\t%s\t%s\t%s", UID, A_TYPE, DENIED, path, HASH_STRING, ctime(&now));
 
 	fclose(LOG_FILE);
 
@@ -257,7 +252,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 	/* I log write access type whenever fwrite() is used */
 	ACCESS A_TYPE = WRITE;
 
-	fprintf(LOG_FILE, "%d\t%d\t%d\t%s\t%s\t%s", UID, A_TYPE, DENIED, filename, HASH_STRING, ctime(&now));
+	fprintf(LOG_FILE, "%d\t%d\t%d\t%s\t%s\t%s", UID, A_TYPE, DENIED, filebname, HASH_STRING, ctime(&now));
 
 	fclose(LOG_FILE);
 
