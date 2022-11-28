@@ -200,6 +200,8 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 		return original_fwrite_ret;
 	}
 
+
+
 	/* Get UID and Current Datetime */
 
 	int UID = (int) getuid();
@@ -240,6 +242,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 	for(int i = 0; i < MD5_DIGEST_LENGTH; i++){
 		sprintf(&HASH_STRING[i*2], "%02x", (unsigned int) FILE_HASH[i]);
 	}
+
 
 	/* Call original fopen() to open the logging file with append mode */
 	FILE* (*original_fopen)(const char*, const char*);

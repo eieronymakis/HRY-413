@@ -29,6 +29,8 @@ clean:
 
 test: clean all run malicious mon
 
+test_basic: clean all run
+
 malicious:
 	su malicious -c "make run"
 	su malicious2 -c "make run"
