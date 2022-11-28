@@ -26,14 +26,3 @@ clean:
 	rm -rf file_*
 	rm -rf encrypted_logging.log
 	rm -rf decrypted_logging.log
-
-test: clean all run malicious mon
-
-test_basic: clean all run
-
-malicious:
-	su malicious -c "make run"
-	su malicious2 -c "make run"
-
-mon:
-	./acmonitor -m
