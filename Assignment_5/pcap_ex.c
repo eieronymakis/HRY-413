@@ -10,10 +10,12 @@
 #include <net/ethernet.h>
 #include <linux/tcp.h>
 #include <linux/udp.h>
+#include <inttypes.h>
 
 /* Useful links */
 // -> https://linux.die.net/man/3/pcap (pcap lib)
 // -> https://www.liveaction.com/resources/white-papers-solution-briefs/packet-vs-flow-a-look-at-network-traffic-analysis-techniques/ (Netflows vs Packets)
+// -> https://www.wireshark.org/docs/wsug_html_chunked/ChAdvTCPAnalysis.html
 
 /* Colors for stdout */
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -51,9 +53,20 @@ typedef struct{
     char protocol[4];
 }flow;
 
+typedef struct{
+    int num;
+    char * source_addr;
+    char * dest_addr;
+    int source_port;
+    int dest_port;
+    uint32_t seq;
+    int payload;
+}tcp_packet;
+
 
 /* Statistic Variables */
 flow * netflows;
+tcp_packet * tcpPackets;
 
 int PACKET_COUNT = 0;
 int TCP_UDP_PACKET_COUNT = 0;
@@ -72,7 +85,7 @@ int UDP_BYTES = 0;
 FILE * LOG_FILE = NULL;
 
 /* Prints information about a packet (Used in Offline mode) */
-void printPacket(int pc, char * saddr, char * daddr, unsigned short sport, unsigned short dport, char * prot, int hl, int pl){
+void printPacket(int pc, char * saddr, char * daddr, unsigned short sport, unsigned short dport, char * prot, int hl, int pl,const u_char * mem){
     printf("{\n");
     printf("\t# : %d,\n",pc);
     printf("\tSource IP Address : %s,\n",saddr);
@@ -81,13 +94,50 @@ void printPacket(int pc, char * saddr, char * daddr, unsigned short sport, unsig
     printf("\tDestination Port Number : %hu,\n",dport);
     printf("\tProtocol : %s,\n",prot);
     printf("\t%s header length : %d,\n",prot,hl);
-    printf("\t%s payload length : %d\n",prot,pl);
+    printf("\t%s payload length : %d,\n",prot,pl);
+    printf("\tPayload Memory Address : %p\n", mem);
     printf("}\n\n"); 
+}
+
+/* Save TCP Packet into tcpPackets Array */
+void insertTcpPacket(char * sa, char *da, unsigned short sp, unsigned short dp,int payload, uint32_t seq, int ipv){
+    tcpPackets=realloc(tcpPackets,(TCP_PACKET_COUNT+1)*sizeof(tcp_packet));
+    if(ipv==4){
+        tcpPackets[TCP_PACKET_COUNT].source_addr=(char*)malloc(INET_ADDRSTRLEN);
+        tcpPackets[TCP_PACKET_COUNT].dest_addr=(char*)malloc(INET_ADDRSTRLEN);
+    }
+    else{
+        tcpPackets[TCP_PACKET_COUNT].source_addr=(char*)malloc(INET6_ADDRSTRLEN);
+        tcpPackets[TCP_PACKET_COUNT].dest_addr=(char*)malloc(INET6_ADDRSTRLEN);
+    }
+    strcpy(tcpPackets[TCP_PACKET_COUNT].source_addr,sa);
+    strcpy(tcpPackets[TCP_PACKET_COUNT].dest_addr,da);
+    tcpPackets[TCP_PACKET_COUNT].source_port=(int)sp;
+    tcpPackets[TCP_PACKET_COUNT].dest_port=(int)dp;
+    tcpPackets[TCP_PACKET_COUNT].seq = seq;
+    tcpPackets[TCP_PACKET_COUNT].payload = payload;
+    tcpPackets[TCP_PACKET_COUNT].num = PACKET_COUNT;
+}
+
+/* Buggy... Check if Packet is a retransmission based on the previous packet from same network flow (Doesn't work as expected) */
+bool findTcpRetransmission(char * sa, char * da, unsigned short sp, unsigned short dp, uint32_t seq){
+    if(TCP_PACKET_COUNT <= 1)
+        return FALSE;
+    tcp_packet target;
+    for(int i = TCP_PACKET_COUNT-1; i >= 0; i--){
+        if(strcmp(sa, tcpPackets[i].source_addr) == 0 && strcmp(da, tcpPackets[i].dest_addr) == 0 && sp == tcpPackets[i].source_port && dp == tcpPackets[i].dest_port){
+            if(tcpPackets[i].seq + tcpPackets[i].payload == seq)
+                return FALSE;
+            if(tcpPackets[i].payload + tcpPackets[i].seq > seq){
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
 }
 
 /* Check if the packet is a new Network flow, if yes then insert it to the netflow array */
 void insertFlow(char * src, char * dst, unsigned short src_prt, unsigned short dst_prt, char * prot, int ipv){
-    
     bool exists = FALSE;
     /* Check if there is a record sharing the same attributes */
     /* A network flow is defined by the 5-tuple {source IP address, source port, destination IP address, destination
@@ -126,9 +176,8 @@ port, protocol}. */
     }
 }
 
-/* Callback function of pcap_open_live() & pcap_open_offline() used for packet processing*/
+/* Callback function of pcap_open_live() & pcap_open_offline() used for packet processing */
 void callback(u_char * args, const struct pcap_pkthdr * pkthdr, const u_char * packet){
-
     PACKET_COUNT++;
 
     struct ether_header * ethHeaderPtr;
@@ -204,18 +253,21 @@ void callback(u_char * args, const struct pcap_pkthdr * pkthdr, const u_char * p
     TCP_UDP_PACKET_COUNT++;
 
     int payload_length = pkthdr -> caplen - sizeof(struct ether_header) - header_len - protocol_header_length;
-
+    
     /* Offline mode */
     if(OFFLINE)
-        printPacket(PACKET_COUNT,source_addr,dest_addr,source_port,dest_port,protocol_type_string,protocol_header_length,payload_length);  
+        printPacket(PACKET_COUNT,source_addr,dest_addr,source_port,dest_port,protocol_type_string,protocol_header_length,payload_length, sizeof(struct ether_header) + header_len + protocol_header_length + packet);  
     /* Live mode */
     else if(LIVE)
-        fprintf(LOG_FILE,"{\n\t# : %d,\n\tSource Addr. : %s,\n\tDest. Addr. : %s,\n\tSource Port : %hu,\n\tDest. Port : %hu,\n\tProtocol : %s,\n\tProt. Header Length : %d,\n\tProt. Payload Length : %d\n}\n", PACKET_COUNT, source_addr, dest_addr, source_port, dest_port, protocol_type_string,protocol_header_length, payload_length);
-
+        fprintf(LOG_FILE,"{\n\t# : %d,\n\tSource Addr. : %s,\n\tDest. Addr. : %s,\n\tSource Port : %hu,\n\tDest. Port : %hu,\n\tProtocol : %s,\n\tProt. Header Length : %d,\n\tProt. Payload Length : %d,\n\tProt Payload Mem. Address : %p\n}\n", PACKET_COUNT, source_addr, dest_addr, source_port, dest_port, protocol_type_string,protocol_header_length, payload_length, sizeof(struct ether_header) + header_len + protocol_header_length + packet);
 
     insertFlow(source_addr,dest_addr,source_port,dest_port,protocol_type_string,ipHeader->ip_v);
 
     if(strcmp(protocol_type_string,"TCP") == 0){
+        bool answer = findTcpRetransmission(source_addr, dest_addr, source_port, dest_port, htonl(tcpHeader->seq));
+        // if(answer == TRUE)
+        //     printf("%d retransmission\n",PACKET_COUNT);
+        insertTcpPacket(source_addr, dest_addr, source_port, dest_port, payload_length, htonl(tcpHeader->seq), ipHeader->ip_v);
         TCP_PACKET_COUNT++;
         TCP_BYTES+=payload_length;
     }else{
@@ -353,7 +405,10 @@ int main(int argc, char * argv[]){
 
 
     pcap_close(CAP_HANDLE_DESC);
+
     free(netflows);
+    free(tcpPackets);
+
     if(LIVE)
         fclose(LOG_FILE);
 
