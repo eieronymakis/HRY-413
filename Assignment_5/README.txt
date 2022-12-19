@@ -60,12 +60,6 @@ I chose to use the source port.
 Example:
 If option -f "port 8080" is given the program will filter out packets that don't have 8080 source port.
 Also I asked and made sure that only port can be given as a filter
----------------------------------------------------------------------------
-Bugs
----------------------------------------------------------------------------
-When using live mode if the operator uses CTRL + C (SIGINT) to terminate the process
-then the program will not log the summary statistics to the file, or the last packet may not contain all the information.
-I implemented a handler function using signal(SIGINT) but it's not working as expected.
 
 
 

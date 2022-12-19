@@ -383,26 +383,43 @@ int main(int argc, char * argv[]){
         }
     }
 
+    /* What happens on user interrupt (not working needs while here) */
+    signal(SIGINT, terminatePcapLoop);
+    
     /* Choose action based on arguments */
     processArgs();
 
-    /* What happens on user interrupt (not working needs while here) */
-    signal(SIGINT, terminatePcapLoop);
 
-    /* Done! Prints Statistics */
-    printf(ANSI_COLOR_GREEN"________________________________________\n");
-    printf("Statistics\n");
-    printf("________________________________________\n"ANSI_COLOR_RESET);
-    printf(ANSI_COLOR_GREEN"Network flows : %d\n",NETFLOW_COUNT);
-    printf("TCP Network flows : %d\n",TCP_NETFLOW_COUNT);
-    printf("UDP Network flows : %d\n",UDP_NETFLOW_COUNT);
-    printf("Total Packets : %d\n",PACKET_COUNT);
-    printf("TCP Packets : %d\n",TCP_PACKET_COUNT);
-    printf("UDP Packets : %d\n",UDP_PACKET_COUNT);
-    printf("TCP Packet Byte Count : %d\n", TCP_BYTES);
-    printf("UDP Packet Byte Count : %d\n"ANSI_COLOR_RESET, UDP_BYTES);
-    printf(ANSI_COLOR_GREEN"________________________________________\n\n"ANSI_COLOR_RESET);
-
+    if(LIVE){
+         /* Done! Prints Statistics */
+        fprintf(LOG_FILE,"________________________________________\n");
+        fprintf(LOG_FILE,"Statistics\n");
+        fprintf(LOG_FILE,"________________________________________\n");
+        fprintf(LOG_FILE,"Network flows : %d\n",NETFLOW_COUNT);
+        fprintf(LOG_FILE,"TCP Network flows : %d\n",TCP_NETFLOW_COUNT);
+        fprintf(LOG_FILE,"UDP Network flows : %d\n",UDP_NETFLOW_COUNT);
+        fprintf(LOG_FILE,"Total Packets : %d\n",PACKET_COUNT);
+        fprintf(LOG_FILE,"TCP Packets : %d\n",TCP_PACKET_COUNT);
+        fprintf(LOG_FILE,"UDP Packets : %d\n",UDP_PACKET_COUNT);
+        fprintf(LOG_FILE,"TCP Packet Byte Count : %d\n", TCP_BYTES);
+        fprintf(LOG_FILE,"UDP Packet Byte Count : %d\n", UDP_BYTES);
+        fprintf(LOG_FILE,"________________________________________\n\n");
+    }else{
+         /* Done! Prints Statistics */
+        printf(ANSI_COLOR_GREEN"________________________________________\n");
+        printf("Statistics\n");
+        printf("________________________________________\n"ANSI_COLOR_RESET);
+        printf(ANSI_COLOR_GREEN"Network flows : %d\n",NETFLOW_COUNT);
+        printf("TCP Network flows : %d\n",TCP_NETFLOW_COUNT);
+        printf("UDP Network flows : %d\n",UDP_NETFLOW_COUNT);
+        printf("Total Packets : %d\n",PACKET_COUNT);
+        printf("TCP Packets : %d\n",TCP_PACKET_COUNT);
+        printf("UDP Packets : %d\n",UDP_PACKET_COUNT);
+        printf("TCP Packet Byte Count : %d\n", TCP_BYTES);
+        printf("UDP Packet Byte Count : %d\n"ANSI_COLOR_RESET, UDP_BYTES);
+        printf(ANSI_COLOR_GREEN"________________________________________\n\n"ANSI_COLOR_RESET);
+    }
+    
 
     pcap_close(CAP_HANDLE_DESC);
 
