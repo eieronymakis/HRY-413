@@ -1,2 +1,2 @@
 # HRY-413
-Cyber Security Course
+System & Service Security Course
